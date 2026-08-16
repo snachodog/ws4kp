@@ -158,6 +158,7 @@ const init = async () => {
 	if (play === null || play === 'true') postMessage('navButton', 'play');
 
 	document.querySelector('#btnClearQuery').addEventListener('click', () => {
+		autoComplete.setValue('');
 		document.querySelector('#spanCity').innerHTML = '';
 		document.querySelector('#spanState').innerHTML = '';
 		document.querySelector('#spanStationId').innerHTML = '';
@@ -491,8 +492,7 @@ const btnGetGpsClick = async () => {
 };
 
 const getForecastFromLatLon = (latitude, longitude, fromGps = false) => {
-	const txtAddress = document.querySelector(TXT_ADDRESS_SELECTOR);
-	txtAddress.value = `${round2(latitude, 4)}, ${round2(longitude, 4)}`;
+	window.autoComplete.setValue(`${round2(latitude, 4)}, ${round2(longitude, 4)}`);
 
 	doRedirectToGeometry({ y: latitude, x: longitude }, (point) => {
 		const location = point.properties.relativeLocation.properties;
@@ -501,7 +501,10 @@ const getForecastFromLatLon = (latitude, longitude, fromGps = false) => {
 		localStorage.setItem('latLon', JSON.stringify({ lat: latitude, lon: longitude }));
 		localStorage.setItem('latLonQuery', query);
 		localStorage.setItem('latLonFromGPS', fromGps);
-		txtAddress.value = `${location.city}, ${location.state}`;
+		// keep AutoComplete's tracked value in sync so a later GO click doesn't
+		// think the field is still empty (autocomplete.mjs directFormSubmit
+		// checks currentValue, not the input element's value)
+		window.autoComplete.setValue(`${location.city}, ${location.state}`);
 	});
 };
 
