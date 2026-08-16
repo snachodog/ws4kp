@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
+import helmet from 'helmet';
 import fs from 'fs';
 import { readFile } from 'fs/promises';
 import {
@@ -9,6 +10,7 @@ import playlist from './src/playlist.mjs';
 import OVERRIDES from './src/overrides.mjs';
 import cache from './proxy/cache.mjs';
 import devTools from './src/com.chrome.devtools.mjs';
+import logSecurityEvent from './src/security-log.mjs';
 
 const travelCities = JSON.parse(await readFile('./datagenerators/output/travelcities.json'));
 const regionalCities = JSON.parse(await readFile('./datagenerators/output/regionalcities.json'));
@@ -16,6 +18,54 @@ const stationInfo = JSON.parse(await readFile('./datagenerators/output/stations.
 
 const app = express();
 const port = process.env.WS4KP_PORT ?? 8080;
+
+// Security headers (defense-in-depth). In production this app sits behind an
+// nginx/Cloudflare reverse proxy that also applies some hardening, but these headers
+// are cheap and worth setting here too in case the app is ever run standalone.
+//
+// contentSecurityPolicy/crossOrigin* are left disabled: the page relies on inline
+// <script> blocks for server-injected config (OVERRIDES, WS4KP_LOCKED_SETTINGS) with no
+// nonce/hash infrastructure, and the client makes a direct cross-origin fetch to ArcGIS
+// for location geocoding (server/scripts/modules/autocomplete.mjs). Locking those down
+// would need a real CSP audit/rollout, which is out of scope here - enabling helmet's
+// defaults for them would risk breaking the app rather than securing it.
+// HSTS is handled separately below since it must only be sent over an actual HTTPS
+// connection, which helmet's own hsts() middleware doesn't check for.
+app.use(helmet({
+	contentSecurityPolicy: false,
+	crossOriginEmbedderPolicy: false,
+	crossOriginOpenerPolicy: false,
+	crossOriginResourcePolicy: false,
+	hsts: false,
+}));
+
+// HSTS - only send when the request actually arrived over HTTPS. This app runs in
+// production behind an nginx/Cloudflare reverse proxy (TLS terminates there and
+// forwards X-Forwarded-Proto), but also runs directly over plain HTTP for local dev
+// (`npm start`) - sending HSTS there would incorrectly tell browsers to force HTTPS
+// for local/dev hosts.
+app.use((req, res, next) => {
+	const isHttps = req.secure || req.headers['x-forwarded-proto'] === 'https';
+	if (isHttps) {
+		res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+	}
+	next();
+});
+
+// Reject requests declaring an oversized body before any handler processes them.
+// Nothing in this app parses a request body - verified: no express.json/urlencoded/
+// multer anywhere, and no POST/PUT/PATCH routes exist at all - but this is cheap
+// defense-in-depth against a client declaring a huge Content-Length.
+const MAX_REQUEST_BODY_BYTES = 16 * 1024;
+app.use((req, res, next) => {
+	const contentLength = Number(req.headers['content-length']);
+	if (Number.isFinite(contentLength) && contentLength > MAX_REQUEST_BODY_BYTES) {
+		logSecurityEvent('request-too-large', req, { contentLength, limit: MAX_REQUEST_BODY_BYTES });
+		res.status(413).json({ error: 'Payload too large' });
+		return;
+	}
+	next();
+});
 
 // Set X-Weatherstar header globally for playlist fallback detection
 app.use((req, res, next) => {
@@ -122,10 +172,15 @@ const staticOptions = {
 if (!process.env?.STATIC) {
 	app.use('/api/', weatherProxy);
 
-	// Cache management DELETE endpoint to allow "uncaching" specific URLs
+	// Cache management DELETE endpoint to allow "uncaching" specific URLs.
+	// Not cookie/session-authenticated, so CSRF doesn't apply, but it's an
+	// unauthenticated state-changing endpoint reachable by anyone who can reach this
+	// server - log evictions so abuse (e.g. repeatedly busting cache to hammer
+	// upstream APIs) is visible in the logs.
 	app.delete(/^\/cache\/.*/, (req, res) => {
 		const path = req.url.replace('/cache', '');
 		const cleared = cache.clearEntry(path);
+		logSecurityEvent('cache-evict', req, { path, cleared });
 		res.json({ cleared, path });
 	});
 

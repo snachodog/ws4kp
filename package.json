@@ -30,7 +30,6 @@
 	"devDependencies": {
 		"@commitlint/cli": "^19.5.0",
 		"@commitlint/config-conventional": "^19.5.0",
-		"husky": "^9.1.6",
 		"@eslint/eslintrc": "^3.3.1",
 		"@zakj/no-sleep": "^0.13.6",
 		"ajv": "^8.17.1",
@@ -47,6 +46,7 @@
 		"gulp-rename": "^2.0.0",
 		"gulp-sass": "^6.0.0",
 		"gulp-terser": "^2.0.0",
+		"husky": "^9.1.6",
 		"luxon": "^3.0.0",
 		"metar-taf-parser": "^9.0.0",
 		"p-limit": "^7.3.1",
@@ -60,7 +60,8 @@
 	"dependencies": {
 		"dotenv": "^17.0.1",
 		"ejs": "^6.0.1",
-		"express": "^5.1.0"
+		"express": "^5.1.0",
+		"helmet": "^8.3.0"
 	},
 	"allowScripts": {
 		"@parcel/watcher@2.6.0": true
