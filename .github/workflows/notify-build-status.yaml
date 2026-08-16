@@ -16,6 +16,7 @@ jobs:
           NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
           STATUS: ${{ github.event.workflow_run.conclusion }}
           WORKFLOW: ${{ github.event.workflow_run.name }}
+          REPO: ${{ github.repository }}
           BRANCH: ${{ github.event.workflow_run.head_branch }}
           RUN_URL: ${{ github.event.workflow_run.html_url }}
         run: |
@@ -26,11 +27,10 @@ jobs:
             PRIORITY="urgent"
             TITLE="$WORKFLOW $STATUS"
           fi
+          MESSAGE=$(printf 'Repo: %s\nBranch: %s\nRun: %s' "$REPO" "$BRANCH" "$RUN_URL")
           curl -sf \
             -H "Authorization: Bearer $NTFY_TOKEN" \
             -H "Title: $TITLE" \
             -H "Priority: $PRIORITY" \
-            -d "Repo: ${{ github.repository }}
-Branch: $BRANCH
-Run: $RUN_URL" \
+            --data-binary "$MESSAGE" \
             https://ntfy.dogiakos.com/steve_alerts
