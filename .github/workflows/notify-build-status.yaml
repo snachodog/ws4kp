@@ -1,0 +1,36 @@
+name: notify-build-status
+
+on:
+  workflow_run:
+    workflows: ["build-docker", "build-docker-server"]
+    types: [completed]
+
+jobs:
+  notify:
+    name: Notify ntfy
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.head_branch == 'main' || startsWith(github.event.workflow_run.head_branch, 'v')
+    steps:
+      - name: Send ntfy notification
+        env:
+          NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
+          STATUS: ${{ github.event.workflow_run.conclusion }}
+          WORKFLOW: ${{ github.event.workflow_run.name }}
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+        run: |
+          if [ "$STATUS" = "success" ]; then
+            PRIORITY="default"
+            TITLE="$WORKFLOW succeeded"
+          else
+            PRIORITY="urgent"
+            TITLE="$WORKFLOW $STATUS"
+          fi
+          curl -sf \
+            -H "Authorization: Bearer $NTFY_TOKEN" \
+            -H "Title: $TITLE" \
+            -H "Priority: $PRIORITY" \
+            -d "Repo: ${{ github.repository }}
+Branch: $BRANCH
+Run: $RUN_URL" \
+            https://ntfy.dogiakos.com/steve_alerts
