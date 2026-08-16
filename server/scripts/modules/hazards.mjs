@@ -66,8 +66,10 @@ class Hazards extends WeatherDisplay {
 		// auto reload must be set up specifically for hazards in case it is disabled via checkbox (for the bottom line scroll)
 		if (this.autoRefreshHandle === null) this.setAutoReload();
 
-		const alert = this.checkbox.querySelector('.alert');
-		alert.classList.remove('show');
+		// checkbox is absent when this display's inclusion was locked via a
+		// WSQS_ env var (see WeatherDisplay.generateCheckbox)
+		const alert = this.checkbox?.querySelector('.alert');
+		alert?.classList.remove('show');
 
 		// if not a refresh (new site), all alerts are new
 		if (!refresh) {
@@ -110,7 +112,7 @@ class Hazards extends WeatherDisplay {
 			}, 0);
 
 			// show alert indicator
-			if (unViewed > 0) alert.classList.add('show');
+			if (unViewed > 0) alert?.classList.add('show');
 			// draw the canvas to calculate the new timings and activate hazards in the slide deck again
 			// unless this has been disabled
 			if (this.isEnabled) {
