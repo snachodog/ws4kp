@@ -156,6 +156,14 @@ services:
     image: ghcr.io/snachodog/ws4kp-server:latest
     container_name: ws4kp
     restart: unless-stopped
+    environment:
+      # Any permalink query-string parameter can be set as a default here by
+      # prefixing it with WSQS_ (see Sharing a Permalink below for the full
+      # list of parameters). With these set, visiting the site with no query
+      # string auto-loads this location instead of prompting in the browser.
+      - WSQS_latLonQuery=Orlando International Airport Orlando FL USA
+      - WSQS_hazards=false
+      - WSQS_current_weather=true
     ports:
       - "8082:8080"
 ```
@@ -174,8 +182,6 @@ Change the host-side port (`8082`) if it conflicts with something else on your n
 docker compose pull
 docker compose up -d
 ```
-
-WSQS_ environment variables (see [Sharing a Permalink](#sharing-a-permalink-bookmarking)) can be added under `environment:` the same way as the static-deployment example above.
 
 ### Serving a static app
 

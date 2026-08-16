@@ -4,5 +4,14 @@ services:
     image: ghcr.io/snachodog/ws4kp-server:latest
     container_name: ws4kp
     restart: unless-stopped
+    environment:
+      # Any permalink query-string parameter can be set as a default here by
+      # prefixing it with WSQS_ (camelCase params keep their name; hyphenated
+      # params use underscores, e.g. current-weather -> WSQS_current_weather).
+      # With these set, visiting the site with no query string auto-loads
+      # this location instead of prompting for one in the browser.
+      - WSQS_latLonQuery=Orlando International Airport Orlando FL USA
+      - WSQS_hazards=false
+      - WSQS_current_weather=true
     ports:
       - "8082:8080"
