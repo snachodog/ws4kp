@@ -19,9 +19,17 @@
  */
 
 import https from 'https';
+import logSecurityEvent from '../src/security-log.mjs';
 
 // Default timeout for upstream requests (matches client-side default)
 const DEFAULT_REQUEST_TIMEOUT = 15000;
+
+// Cache keys are derived from client-controlled path + querystring (see generateKey
+// below). Without a cap, a client could grow this Map indefinitely by requesting many
+// distinct query strings, exhausting server memory. This bounds it; the request line
+// itself (and therefore the querystring) is also bounded by Node's own
+// --max-http-header-size default, so individual keys can't be arbitrarily huge either.
+const MAX_CACHE_ENTRIES = 1000;
 
 class HttpCache {
 	constructor() {
@@ -47,6 +55,17 @@ class HttpCache {
 		}
 
 		return 0; // No cache if no cache directives found
+	}
+
+	// A header value is only safe to forward upstream if it doesn't contain CR/LF or
+	// other control characters. Node's http client already rejects such values with a
+	// synchronous throw (ERR_INVALID_CHAR) when building the outgoing request, which
+	// previously left the client's request hanging with no response ever sent (the
+	// rejection wasn't turned into an HTTP response). Sanitizing up front avoids that
+	// path entirely and lets us log the attempt instead.
+	static isSafeHeaderValue(value) {
+		// eslint-disable-next-line no-control-regex
+		return typeof value === 'string' && !/[\r\n\x00-\x1f]/.test(value);
 	}
 
 	// Helper method to set filtered headers and our cache policy
@@ -150,8 +169,13 @@ class HttpCache {
 			const result = await requestPromise;
 			return result;
 		} catch (error) {
-			// All errors are handled directly by makeUpstreamRequest so this is a safety net
+			// All errors are handled directly by makeUpstreamRequest so this is a safety net -
+			// but if something did slip through (e.g. a synchronous throw while building the
+			// upstream request), make sure the client still gets a response instead of hanging.
 			console.error(`💥 Error    | Unhandled error in handleRequest: ${error.message}`);
+			if (!res.headersSent) {
+				res.status(500).json({ error: 'Internal proxy error' });
+			}
 			return false;
 		} finally {
 			// Always clean up the in-flight tracking
@@ -162,9 +186,19 @@ class HttpCache {
 	// Make the upstream request, handling caching and conditional requests
 	async makeUpstreamRequest(req, res, fullUrl, options = {}, cacheResult = null) {
 		return new Promise((resolve) => {
+			const rawAccept = req.headers?.accept;
+			let accept = '*/*';
+			if (rawAccept) {
+				if (HttpCache.isSafeHeaderValue(rawAccept)) {
+					accept = rawAccept;
+				} else {
+					logSecurityEvent('invalid-header-value', req, { header: 'accept' });
+				}
+			}
+
 			const headers = {
 				'user-agent': options.userAgent || '(WeatherStar 4000+, ws4000@netbymatt.com)',
-				accept: req.headers?.accept || '*/*',
+				accept,
 				...options.headers,
 			};
 
@@ -394,6 +428,14 @@ class HttpCache {
 				'last-modified': (originalHeaders || {})['last-modified'],
 			},
 		};
+
+		// Bound total cache size (see MAX_CACHE_ENTRIES) before adding a new key. Map
+		// iteration order is insertion order, so the first key is the oldest entry.
+		if (!this.cache.has(key) && this.cache.size >= MAX_CACHE_ENTRIES) {
+			const oldestKey = this.cache.keys().next().value;
+			this.cache.delete(oldestKey);
+			logSecurityEvent('cache-capacity-evict', req, { evictedKey: oldestKey, limit: MAX_CACHE_ENTRIES });
+		}
 
 		this.cache.set(key, cached);
 
