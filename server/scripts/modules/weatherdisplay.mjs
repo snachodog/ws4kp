@@ -72,6 +72,10 @@ class WeatherDisplay {
 		// refresh (or initially store the state of the checkbox)
 		window.localStorage.setItem(`display-enabled: ${this.elemId}`, this.isEnabled);
 
+		// if this display's inclusion was forced by a server-side WSQS_ env var,
+		// skip the checkbox so the operator-set default can't be overridden
+		if (window.WS4KP_LOCKED_SETTINGS?.includes(this.elemId)) return false;
+
 		// create a checkbox in the selected displays area
 		const label = document.createElement('label');
 		label.for = `${this.elemId}-checkbox`;

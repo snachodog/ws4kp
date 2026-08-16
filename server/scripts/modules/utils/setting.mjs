@@ -44,6 +44,12 @@ class Setting {
 		// includes a fallback to the older prefix/suffix version
 		const queryString = parseQueryString();
 		const urlValue = queryString?.[shortName] ?? queryString?.[this.elemId];
+
+		// if this setting was forced by a server-side WSQS_ env var, hide its
+		// control so the operator-set default can't be overridden in the browser
+		if (window.WS4KP_LOCKED_SETTINGS?.includes(shortName)) {
+			this.visible = false;
+		}
 		let urlState;
 		if (this.type === 'checkbox' && urlValue !== undefined) {
 			urlState = urlValue === 'true';

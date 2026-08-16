@@ -48,6 +48,14 @@ const init = async () => {
 		return; // Stop initialization
 	}
 
+	// if the location was forced by a server-side WSQS_ env var, hide the
+	// search box so the operator-set default can't be overridden in the browser
+	const locationLocked = window.WS4KP_LOCKED_SETTINGS?.includes('latLonQuery')
+		|| window.WS4KP_LOCKED_SETTINGS?.includes('latLon');
+	if (locationLocked) {
+		document.querySelector('#divQuery').style.display = 'none';
+	}
+
 	document.querySelector(TXT_ADDRESS_SELECTOR).addEventListener('focus', (e) => {
 		e.target.select();
 	});

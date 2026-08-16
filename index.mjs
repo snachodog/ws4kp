@@ -59,10 +59,13 @@ const renderIndex = (req, res, production = false) => {
 		version,
 		OVERRIDES,
 		query: req.query,
+		// keys forced by WSQS_ env vars - the client hides/locks the matching
+		// controls so an operator-set default can't be overridden in the browser
+		lockedSettings: Object.keys(qsVars),
 	});
 };
 
-const index = (req, res) => {
+const index = (req, res, production = false) => {
 	// test for no query string in request and if environment query string values were provided
 	if (hasQsVars && Object.keys(req.query).length === 0) {
 		// redirect the user to the query-string appended url
@@ -71,8 +74,8 @@ const index = (req, res) => {
 		res.redirect(307, url.toString());
 		return;
 	}
-	// return the EJS template page in development mode (serve files from server directory directly)
-	renderIndex(req, res, false);
+	// return the EJS template page (production mode serves the pre-built dist bundle)
+	renderIndex(req, res, production);
 };
 
 const geoip = (req, res) => {
@@ -161,7 +164,8 @@ if (process.env?.DIST === '1') {
 	app.use('/music', express.static('./server/music', staticOptions));
 
 	// render the EJS template in production mode (serve compressed files from dist directory)
-	app.get('/', (req, res) => { renderIndex(req, res, true); });
+	// routes through index() so the WSQS_ redirect-to-querystring logic also applies here
+	app.get('/', (req, res) => { index(req, res, true); });
 
 	app.use('/', express.static('./dist', staticOptions));
 } else {

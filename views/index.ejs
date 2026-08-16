@@ -28,6 +28,12 @@
   </script>
   <% } %>
 
+  <script>
+    // query-string keys forced by a WSQS_ env var on the server - controls
+    // for these are hidden so an operator-set default can't be overridden
+    window.WS4KP_LOCKED_SETTINGS = <%- JSON.stringify(lockedSettings ?? []) %>;
+  </script>
+
   <% if (production) { %>
   <link rel="stylesheet" type="text/css" href="resources/ws.min.css?_=<%=production%>" />
   <script type="text/javascript" src="resources/vendor.min.js?_=<%=production%>"></script>
