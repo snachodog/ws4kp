@@ -160,10 +160,24 @@ services:
       # Any permalink query-string parameter can be set as a default here by
       # prefixing it with WSQS_ (see Sharing a Permalink below for the full
       # list of parameters). With these set, visiting the site with no query
-      # string auto-loads this location instead of prompting in the browser.
+      # string auto-loads this configuration instead of prompting in the
+      # browser - and each WSQS_-forced value also removes its own control
+      # from the page, so visitors can't override an operator-set default.
       - WSQS_latLonQuery=Orlando International Airport Orlando FL USA
-      - WSQS_hazards=false
+      # selected displays - values below match the app's own defaults; flip
+      # any of these to customize which panels are shown, in rotation order
+      - WSQS_hazards=true
       - WSQS_current_weather=true
+      - WSQS_latest_observations=true
+      - WSQS_hourly=false
+      - WSQS_hourly_graph=true
+      - WSQS_travel=false
+      - WSQS_regional_forecast=true
+      - WSQS_local_forecast=true
+      - WSQS_extended_forecast=true
+      - WSQS_almanac=true
+      - WSQS_spc_outlook=true
+      - WSQS_radar=true
     ports:
       - "8082:8080"
 ```
