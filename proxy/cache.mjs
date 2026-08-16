@@ -70,11 +70,17 @@ class HttpCache {
 
 	// Helper method to set filtered headers and our cache policy
 	static setFilteredHeaders(res, headers) {
-		// Strip cache-related headers and pass through others
+		// Strip cache-related headers and pass through others.
+		// Also strip hop-by-hop framing headers (transfer-encoding, content-length,
+		// connection): these describe how the upstream sent bytes to *us*, not how
+		// we're about to send bytes to our own client, and blindly forwarding them
+		// lets the two disagree (e.g. a copied "transfer-encoding: chunked"
+		// alongside Express's own auto-computed Content-Length) - nginx correctly
+		// rejects that combination as invalid HTTP framing with a 502.
+		const hopByHop = ['cache-control', 'expires', 'etag', 'last-modified', 'transfer-encoding', 'content-length', 'connection'];
 		Object.entries(headers || {}).forEach(([key, value]) => {
 			const lowerKey = key.toLowerCase();
-			// Skip cache-related headers that should be controlled by our proxy
-			if (!['cache-control', 'expires', 'etag', 'last-modified'].includes(lowerKey)) {
+			if (!hopByHop.includes(lowerKey)) {
 				res.header(lowerKey, value);
 			}
 		});
