@@ -19,14 +19,14 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/netbymatt/ws4kp.git"
+		"url": "git+https://github.com/snachodog/ws4kp.git"
 	},
 	"author": "Matt Walsh",
 	"license": "MIT",
 	"bugs": {
-		"url": "https://github.com/netbymatt/ws4kp/issues"
+		"url": "https://github.com/snachodog/ws4kp/issues"
 	},
-	"homepage": "https://github.com/netbymatt/ws4kp#readme",
+	"homepage": "https://github.com/snachodog/ws4kp#readme",
 	"devDependencies": {
 		"@commitlint/cli": "^19.5.0",
 		"@commitlint/config-conventional": "^19.5.0",
