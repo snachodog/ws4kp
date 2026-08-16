@@ -1,4 +1,4 @@
-name: build-docker
+name: build-docker-server
 
 on:
   push:
@@ -12,7 +12,7 @@ on:
 
 jobs:
   build:
-    name: Build Image
+    name: Build Server Image
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -25,7 +25,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            ghcr.io/snachodog/ws4kp
+            ghcr.io/snachodog/ws4kp-server
           flavor: |
             latest=false
           tags: |
@@ -50,6 +50,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
+          file: ./Dockerfile.server
           pull: true
           push: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/') }}
           platforms: linux/amd64,linux/arm64/v8
