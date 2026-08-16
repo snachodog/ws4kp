@@ -1,0 +1,8 @@
+---
+services:
+  ws4kp:
+    image: ghcr.io/snachodog/ws4kp-server:latest
+    container_name: ws4kp
+    restart: unless-stopped
+    ports:
+      - "8082:8080"
