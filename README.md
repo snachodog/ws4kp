@@ -146,6 +146,37 @@ services:
     restart: unless-stopped
 ```
 
+### Docker Compose (this fork's server image)
+
+This fork publishes a pre-built server-deployment image (`Dockerfile.server`, Express + caching proxy) to GHCR on every push to `main`, and ships a ready-to-use `docker-compose.yaml` at the repo root:
+
+```yaml
+services:
+  ws4kp:
+    image: ghcr.io/snachodog/ws4kp-server:latest
+    container_name: ws4kp
+    restart: unless-stopped
+    ports:
+      - "8082:8080"
+```
+
+To deploy it:
+
+```bash
+git clone https://github.com/snachodog/ws4kp.git
+cd ws4kp
+docker compose up -d
+```
+
+Change the host-side port (`8082`) if it conflicts with something else on your network — the container always listens on `8080` internally. To pick up a new image after a fresh CI build:
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+WSQS_ environment variables (see [Sharing a Permalink](#sharing-a-permalink-bookmarking)) can be added under `environment:` the same way as the static-deployment example above.
+
 ### Serving a static app
 
 There are several ways to deploy WeatherStar as a static app that runs entirely in the browser:
